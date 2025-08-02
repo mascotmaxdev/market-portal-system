@@ -1,0 +1,81 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande",
+    "Lucida Sans", Arial, sans-serif;
+}
+
+.nav-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4em;
+  background-color: rgb(26, 156, 47);
+}
+
+.nav-container-left {
+  display: flex;
+  gap: 2em;
+  align-items: center;
+  text-align: center;
+}
+
+.nav-container-left ul {
+  list-style: none;
+  display: flex;
+  gap: 1.5em;
+  cursor: pointer;
+}
+
+.nav-container-right {
+  display: flex;
+  gap: 0.5em;
+}
+
+.nav-container-right button {
+  width: 5em;
+  border-radius: 0.2em;
+}
+
+.nav-container-right button:hover {
+  background-color: rgb(31, 30, 30);
+  color: white;
+  transition: ease-in-out;
+}
+
+.hero-section {
+  height: 100vh;
+  position: relative;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-section img {
+  height: 90vh;
+  margin-top: 0.5em;
+}
+
+.hero-section h3 {
+  position: absolute;
+  color: white;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 900px;
+  margin: 20px auto;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.browse-stalls {
+  position: absolute;
+  top: 65%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 250px;
+  height: 50px;
+  border-radius: 5px;
+  background-color: green;
+  color: white;
+  font-size: 1.4em;
+}
