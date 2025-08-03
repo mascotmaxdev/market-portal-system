@@ -1,24 +1,24 @@
-import React from "react";
+import React, { useState } from "react";
 import "./App.css"; // Import the stylesheet
+import NavBar from "./NavBar";
+import Register from "./Register";
+import Login from "./Login";
 
 const App = () => {
+  const [isRegisterWindowOpen, setIsRegisterWindowOpen] = useState(false);
+  const [isLoginWindowOpen, setIsLoginWindowOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   return (
     <>
-      <nav className="nav-container">
-        <div className="nav-container-left">
-          <h2>Market Information System</h2>
-          <ul>
-            <li>Home</li>
-            <li>Browse Stalls</li>
-            <li>FAQs</li>
-            <li>About</li>
-          </ul>
-        </div>
-        <div className="nav-container-right">
-          <button>Login</button>
-          <button>Register</button>
-        </div>
-      </nav>
+      <NavBar
+        isRegisterWindowOpen={isRegisterWindowOpen}
+        setIsRegisterWindowOpen={setIsRegisterWindowOpen}
+        isLoginWindowOpen={isLoginWindowOpen}
+        setIsLoginWindowOpen={setIsLoginWindowOpen}
+        isLoggedIn={isLoggedIn}
+        setIsLoggedIn={setIsLoggedIn}
+      />
       <main className="content">
         <section className="hero-section">
           <img src="./src/assets/images/vendors.png" alt="" />
@@ -30,6 +30,15 @@ const App = () => {
           <button className="browse-stalls">Browse Stalls</button>
         </section>
       </main>
+      {isRegisterWindowOpen && (
+        <Register onClose={() => setIsRegisterWindowOpen(false)} />
+      )}
+      {isLoginWindowOpen && (
+        <Login
+          onClose={() => setIsLoginWindowOpen(false)}
+          setIsLoggedIn={setIsLoggedIn}
+        />
+      )}
     </>
   );
 };
