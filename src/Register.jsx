@@ -42,9 +42,8 @@ const Register = ({ onClose }) => {
 
   const sanitizeInput = (value) => {
     return value
-      .trim()
-      .replace(/[<>"';%(){}]/g, "")
-      .replace(/\s{2,}/g, " ");
+      .replace(/[<>"';%(){}]/g, "") // Remove special chars
+      .replace(/\s\s+/g, " "); // Replace multiple spaces with single space
   };
 
   const formHandleChange = (e) => {
@@ -414,6 +413,7 @@ const Register = ({ onClose }) => {
                 onClick={togglePasswordVisibility}
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 disabled={isSubmitting}
+                tabIndex="-1"
               >
                 {showPassword ? "👁️" : "👁️‍🗨️"}
               </button>
@@ -458,6 +458,7 @@ const Register = ({ onClose }) => {
                   showConfirmPassword ? "Hide password" : "Show password"
                 }
                 disabled={isSubmitting}
+                tabIndex="-1"
               >
                 {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
               </button>

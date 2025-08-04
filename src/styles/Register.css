@@ -61,6 +61,7 @@
 }
 
 .register-modal-body label {
+  font-size: 0.9em;
   margin-bottom: 0.3em;
 }
 
@@ -76,6 +77,10 @@
   width: 100%;
   box-sizing: border-box;
   transition: border 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 0.3em;
+  padding: 0.1em;
+  font-size: 1em;
+  padding: 0.4em;
 }
 
 .register-modal-body input {
@@ -101,7 +106,7 @@
   border: none;
   cursor: pointer;
   font-size: 0.9em;
-  bottom: 19.9%;
+  bottom: 21.2%;
   right: 8%;
   transform: translate(-50%, -50%);
 }
@@ -112,7 +117,7 @@
   border-radius: 0.3em;
   cursor: pointer;
   font-size: 0.9em;
-  bottom: 10.2%;
+  bottom: 11.2%;
   right: 8%;
   transform: translate(-50%, -50%);
 }
@@ -127,13 +132,13 @@
   display: flex;
   justify-content: center;
   gap: 1em;
+  margin-bottom: 0.8em;
 }
 
 .form-btn button {
   display: flex;
   justify-content: center;
-
-  width: 100px;
+  width: 100%;
   background-color: green;
   color: white;
   border: 0.3em;
@@ -147,8 +152,8 @@
 
 /* Error States */
 .input-error {
-  border: 1px solid #ff0000 !important;
-  box-shadow: 0 0 0 1px #ff0000 !important;
+  border: 1px solid rgba(255, 0, 0, 0.9) !important; /* 30% opacity red */
+  box-shadow: 0 0 0 1px rgba(255, 0, 0, 0.3) !important; /* 20% opacity red */
   outline: none !important;
 }
 
