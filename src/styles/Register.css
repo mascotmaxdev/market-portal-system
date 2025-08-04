@@ -1,3 +1,4 @@
+/* Modal Structure */
 .register-modal {
   display: flex;
   flex-direction: column;
@@ -20,10 +21,11 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7); /* Black with 50% opacity */
-  z-index: 100; /* Ensure it's below modal but above other content */
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 100;
 }
 
+/* Header */
 .register-modal-header {
   background-color: green;
   color: white;
@@ -34,26 +36,26 @@
   border-top-left-radius: 0.3em;
   border-top-right-radius: 0.3em;
   text-align: center;
+  margin-bottom: 0.8em;
 }
 
 #close-register-btn {
   background-color: rgb(192, 8, 8);
   border-radius: 20px;
   width: 20px;
-  height: 20px; /* Must match width for perfect circle */
+  height: 20px;
   color: white;
-  display: flex; /* Enables flexbox */
-  justify-content: center; /* Centers horizontally */
-  align-items: center; /* Centers vertically */
-  padding: 0; /* Remove default padding */
-  border: none; /* Remove default border */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  border: none;
   cursor: pointer;
   font-size: 1.4em;
 }
 
+/* Body & Form */
 .register-modal-body {
-  gap: 1em;
-  padding: 0.5em;
   align-items: center;
   justify-content: center;
 }
@@ -65,11 +67,73 @@
 .register-modal-body form {
   display: flex;
   flex-direction: column;
+  width: 300px; /* Ensures form takes full modal width */
 }
 
-.register-modal-body button {
-  width: 100px;
+/* Inputs - Base Styles */
+.register-modal-body input,
+.register-modal-body textarea {
+  width: 100%;
+  box-sizing: border-box;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.register-modal-body input {
+}
+
+/* Password Containers */
+.password-input-container,
+.confirm-password-input-container {
+  display: flex;
   align-items: center;
+  justify-content: center;
+}
+.password-input-container input,
+.confirm-password-input-container input {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Password Toggle Buttons */
+.password-toggle {
+  position: absolute;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9em;
+  bottom: 19.9%;
+  right: 8%;
+  transform: translate(-50%, -50%);
+}
+
+.confirm-password-toggle {
+  position: absolute;
+  border: none;
+  border-radius: 0.3em;
+  cursor: pointer;
+  font-size: 0.9em;
+  bottom: 10.2%;
+  right: 8%;
+  transform: translate(-50%, -50%);
+}
+.password-toggle:disabled,
+.confirm-password-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Form Buttons */
+.form-btn {
+  display: flex;
+  justify-content: center;
+  gap: 1em;
+}
+
+.form-btn button {
+  display: flex;
+  justify-content: center;
+
+  width: 100px;
   background-color: green;
   color: white;
   border: 0.3em;
@@ -81,34 +145,54 @@
   margin-bottom: 0.5em;
 }
 
-.form-btn {
-  display: flex;
-  justify-content: center;
-  gap: 1em;
-}
-
-.register-modal-body form input {
-  width: 300px;
-}
-/* Error state for inputs */
+/* Error States */
 .input-error {
   border: 1px solid #ff0000 !important;
   box-shadow: 0 0 0 1px #ff0000 !important;
   outline: none !important;
 }
 
-/* Textarea specific styling */
-textarea.input-error {
-  border: 1px solid #ff0000 !important;
-  box-shadow: 0 0 0 1px #ff0000 !important;
-}
-
-/* Focus state for errored fields */
 .input-error:focus {
   box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.2) !important;
 }
 
-input,
-textarea {
-  transition: border 0.2s ease, box-shadow 0.2s ease;
+.error-message {
+  color: #ff0000;
+  font-size: 0.7em;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  min-height: 1em;
+}
+
+/* Loading State */
+.submit-spinner {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top: 2px solid white;
+  width: 15px;
+  height: 15px;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.submit-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Placeholder */
+::placeholder {
+  font-size: 10px;
 }

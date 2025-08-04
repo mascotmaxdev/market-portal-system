@@ -1,8 +1,12 @@
 import React, { useState } from "react";
-import App from "./App";
 import "./styles/Register.css";
 
 const Register = ({ onClose }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -36,16 +40,32 @@ const Register = ({ onClose }) => {
     confirmPassword: false,
   });
 
-  const formHandleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
+  const sanitizeInput = (value) => {
+    return value
+      .trim()
+      .replace(/[<>"';%(){}]/g, "")
+      .replace(/\s{2,}/g, " ");
   };
 
-  const handleFormSubmit = (e) => {
+  const formHandleChange = (e) => {
+    const { name, value } = e.target;
+    const sanitizedValue = sanitizeInput(value);
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: sanitizedValue,
+    }));
+
+    // Only validate if the field has been touched
+    if (touched[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: validateField(name, sanitizedValue),
+      }));
+    }
+  };
+
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     // Mark all fields as touched
     const allTouched = Object.keys(formData).reduce((acc, key) => {
@@ -61,18 +81,37 @@ const Register = ({ onClose }) => {
     });
     setErrors(newErrors);
 
-    if (Object.values(newErrors).every((error) => !error)) {
-      console.log("Form is valid, submitting...", formData);
-      // Submit logic here
+    // Check if form is valid
+    const isValid = Object.values(newErrors).every((error) => !error);
+
+    if (!isValid) {
+      setSubmitError("Please fix all errors before submitting.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // Here you would typically make an API call
+      console.log("Form submitted:", formData);
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Handle successful submission
+      // You might want to redirect or show a success message
+      onClose(); // Close the modal after successful submission
+    } catch (error) {
+      setSubmitError("An error occurred during submission. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const validateField = (name, value) => {
     let error = "";
-    const sanitizedValue = value
-      .trim()
-      .replace(/[<>"';%(){}]/g, "")
-      .replace(/\s{2,}/g, " ");
+    const sanitizedValue = sanitizeInput(value);
+
     switch (name) {
       case "firstName":
       case "lastName":
@@ -91,10 +130,11 @@ const Register = ({ onClose }) => {
         if (!sanitizedValue) {
           error = "This field is required";
         } else if (!/^\d+$/.test(sanitizedValue)) {
-          // Regex for whole numbers
           error = "Age must be a whole number";
-        } else if (parseInt(sanitizedValue) < 18) {
-          error = "We don't allow minors to lease a stall";
+        } else {
+          const ageNum = parseInt(sanitizedValue, 10);
+          if (ageNum < 18) error = "Minimum age is 18";
+          else if (ageNum > 120) error = "Please enter a valid age";
         }
         break;
       case "address":
@@ -107,14 +147,15 @@ const Register = ({ onClose }) => {
         }
         break;
       case "contactNumber":
+        const cleanNumber = sanitizedValue.replace(/[^0-9]/g, "");
         if (!sanitizedValue) {
           error = "Contact number is required";
-        } else if (sanitizedValue.length < 7) {
-          error = "Contact number should be at least 7 digits ";
-        } else if (sanitizedValue.length > 15) {
-          error = "Contact number too long (max 15 digits)";
-        } else if (!/^[0-9+() -]+$/.test(sanitizedValue)) {
-          error = "Only numbers, +, (), - and spaces allowed";
+        } else if (cleanNumber.length < 7) {
+          error = "Must contain at least 7 digits";
+        } else if (cleanNumber.length > 15) {
+          error = "Maximum 15 digits allowed";
+        } else if (/([+()-])\1/.test(sanitizedValue)) {
+          error = "Invalid character sequence";
         }
         break;
       case "email":
@@ -143,26 +184,47 @@ const Register = ({ onClose }) => {
           error = "Passwords do not match";
         }
         break;
+      default:
+        break;
     }
     return error;
   };
 
   const handleBlur = (e) => {
-    const { name } = e.target;
+    const { name, value } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
   };
 
   return (
     <>
       <div className="register-modal">
         <div className="register-modal-header">
-          <h3>Register</h3>{" "}
-          <p id="close-register-btn" onClick={onClose}>
+          <h3>Register</h3>
+          <button
+            id="close-register-btn"
+            onClick={!isSubmitting ? onClose : undefined}
+            aria-label="Close registration modal"
+            disabled={isSubmitting}
+          >
             &times;
-          </p>
+          </button>
         </div>
         <div className="register-modal-body">
-          <form onSubmit={handleFormSubmit}>
+          {submitError && (
+            <div className="error-message" role="alert">
+              {submitError}
+            </div>
+          )}
+          <form onSubmit={handleFormSubmit} noValidate>
             <label htmlFor="firstName">First Name</label>
             <input
               id="firstName"
@@ -176,8 +238,9 @@ const Register = ({ onClose }) => {
               }
               aria-describedby="error-firstname"
               aria-invalid={!!errors.firstName}
+              disabled={isSubmitting}
             />
-            <h6
+            <div
               className="error-message"
               id="error-firstname"
               aria-live="assertive"
@@ -188,7 +251,8 @@ const Register = ({ onClose }) => {
               }}
             >
               {touched.firstName ? errors.firstName || " " : " "}
-            </h6>
+            </div>
+
             <label htmlFor="lastName">Last Name</label>
             <input
               id="lastName"
@@ -202,19 +266,21 @@ const Register = ({ onClose }) => {
               }
               aria-describedby="error-lastname"
               aria-invalid={!!errors.lastName}
+              disabled={isSubmitting}
             />
-            <h6
+            <div
               className="error-message"
               id="error-lastname"
               aria-live="assertive"
               style={{
                 visibility:
                   touched.lastName && errors.lastName ? "visible" : "hidden",
-                height: touched.firstName ? "auto" : "1rem",
+                height: touched.lastName ? "auto" : "1rem",
               }}
             >
               {touched.lastName ? errors.lastName || " " : " "}
-            </h6>
+            </div>
+
             <label htmlFor="age">Age</label>
             <input
               id="age"
@@ -227,8 +293,9 @@ const Register = ({ onClose }) => {
               className={touched.age && errors.age ? "input-error" : ""}
               aria-describedby="error-age"
               aria-invalid={!!errors.age}
+              disabled={isSubmitting}
             />
-            <h6
+            <div
               className="error-message"
               id="error-age"
               aria-live="assertive"
@@ -238,7 +305,8 @@ const Register = ({ onClose }) => {
               }}
             >
               {touched.age ? errors.age || " " : " "}
-            </h6>
+            </div>
+
             <label htmlFor="address">Address</label>
             <textarea
               id="address"
@@ -250,8 +318,9 @@ const Register = ({ onClose }) => {
               className={touched.address && errors.address ? "input-error" : ""}
               aria-describedby="error-address"
               aria-invalid={!!errors.address}
+              disabled={isSubmitting}
             />
-            <h6
+            <div
               className="error-message"
               id="error-address"
               aria-live="assertive"
@@ -262,7 +331,8 @@ const Register = ({ onClose }) => {
               }}
             >
               {touched.address ? errors.address || " " : " "}
-            </h6>
+            </div>
+
             <label htmlFor="contactNumber">Contact #</label>
             <input
               id="contactNumber"
@@ -270,7 +340,7 @@ const Register = ({ onClose }) => {
               name="contactNumber"
               value={formData.contactNumber}
               onChange={formHandleChange}
-              onBlur={handleBlur} // Add this
+              onBlur={handleBlur}
               className={
                 touched.contactNumber && errors.contactNumber
                   ? "input-error"
@@ -278,8 +348,9 @@ const Register = ({ onClose }) => {
               }
               aria-describedby="error-contactnumber"
               aria-invalid={!!errors.contactNumber}
+              disabled={isSubmitting}
             />
-            <h6
+            <div
               className="error-message"
               id="error-contactnumber"
               aria-live="assertive"
@@ -292,7 +363,8 @@ const Register = ({ onClose }) => {
               }}
             >
               {touched.contactNumber ? errors.contactNumber || " " : " "}
-            </h6>
+            </div>
+
             <label htmlFor="email">Email</label>
             <input
               id="email"
@@ -300,12 +372,13 @@ const Register = ({ onClose }) => {
               name="email"
               value={formData.email}
               onChange={formHandleChange}
-              onBlur={handleBlur} // Add this
+              onBlur={handleBlur}
               className={touched.email && errors.email ? "input-error" : ""}
               aria-describedby="error-email"
               aria-invalid={!!errors.email}
+              disabled={isSubmitting}
             />
-            <h6
+            <div
               className="error-message"
               id="error-email"
               aria-live="assertive"
@@ -316,22 +389,36 @@ const Register = ({ onClose }) => {
               }}
             >
               {touched.email ? errors.email || " " : " "}
-            </h6>
+            </div>
+
             <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={formHandleChange}
-              onBlur={handleBlur} // Add this
-              className={
-                touched.password && errors.password ? "input-error" : ""
-              }
-              aria-describedby="error-password"
-              aria-invalid={!!errors.password}
-            />
-            <h6
+            <div className="password-input-container">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Must be 8+ characters with 1 uppercase letter and 1 number"
+                value={formData.password}
+                onChange={formHandleChange}
+                onBlur={handleBlur}
+                className={
+                  touched.password && errors.password ? "input-error" : ""
+                }
+                aria-describedby="error-password"
+                aria-invalid={!!errors.password}
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={togglePasswordVisibility}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                disabled={isSubmitting}
+              >
+                {showPassword ? "👁️" : "👁️‍🗨️"}
+              </button>
+            </div>
+            <div
               className="error-message"
               id="error-password"
               aria-live="assertive"
@@ -342,24 +429,40 @@ const Register = ({ onClose }) => {
               }}
             >
               {touched.password ? errors.password || " " : " "}
-            </h6>
+            </div>
+
             <label htmlFor="confirmPassword">Confirm Password</label>
-            <input
-              id="confirmPassword"
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={formHandleChange}
-              onBlur={handleBlur} // Add this
-              className={
-                touched.confirmPassword && errors.confirmPassword
-                  ? "input-error"
-                  : ""
-              }
-              aria-describedby="error-password"
-              aria-invalid={!!errors.password}
-            />
-            <h6
+            <div className="confirm-password-input-container">
+              <input
+                id="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                placeholder="Re-type password"
+                value={formData.confirmPassword}
+                onChange={formHandleChange}
+                onBlur={handleBlur}
+                className={
+                  touched.confirmPassword && errors.confirmPassword
+                    ? "input-error"
+                    : ""
+                }
+                aria-describedby="error-confirm-password"
+                aria-invalid={!!errors.confirmPassword}
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                className="confirm-password-toggle"
+                onClick={toggleConfirmPasswordVisibility}
+                aria-label={
+                  showConfirmPassword ? "Hide password" : "Show password"
+                }
+                disabled={isSubmitting}
+              >
+                {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
+              </button>
+            </div>
+            <div
               className="error-message"
               id="error-confirm-password"
               aria-live="assertive"
@@ -372,19 +475,40 @@ const Register = ({ onClose }) => {
               }}
             >
               {touched.confirmPassword ? errors.confirmPassword || " " : " "}
-            </h6>
+            </div>
+
             <div className="form-btn">
-              <button type="submit" id="submit-btn">
-                Submit
+              <button
+                type="submit"
+                id="submit-btn"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <span className="submit-content">
+                    Submitting...
+                    <span className="submit-spinner"></span>
+                  </span>
+                ) : (
+                  "Submit"
+                )}
               </button>
-              <button id="cancel-btn" onClick={onClose}>
+              <button
+                id="cancel-btn"
+                onClick={onClose}
+                type="button"
+                disabled={isSubmitting}
+              >
                 Cancel
               </button>
             </div>
           </form>
         </div>
       </div>
-      <div className="register-modal-overlay" onClick={onClose}></div>
+      <div
+        className="register-modal-overlay"
+        onClick={!isSubmitting ? onClose : undefined}
+      ></div>
     </>
   );
 };
