@@ -117,7 +117,7 @@
   border-radius: 0.3em;
   cursor: pointer;
   font-size: 0.9em;
-  bottom: 11.2%;
+  bottom: 11.4%;
   right: 8%;
   transform: translate(-50%, -50%);
 }
@@ -166,7 +166,13 @@
   font-size: 0.7em;
   margin-top: 0.2em;
   margin-bottom: 0.2em;
-  min-height: 1em;
+  padding: 0.3em;
+  line-height: 0.7em;
+  visibility: hidden;
+}
+
+.error-message.visible {
+  visibility: visible;
 }
 
 /* Loading State */
