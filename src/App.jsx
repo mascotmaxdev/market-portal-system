@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./App.css"; // Import the stylesheet
+import "./styles/App.css"; // Import the stylesheet
 import NavBar from "./NavBar";
 import Register from "./Register";
 import Login from "./Login";
