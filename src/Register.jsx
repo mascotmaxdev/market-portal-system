@@ -1,13 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./styles/Register.css";
-import axios from "axios";
 
 const Register = ({ onClose }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+  // Form state management
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -19,6 +14,8 @@ const Register = ({ onClose }) => {
     confirmPassword: "",
   });
 
+  // UI state management
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({
     firstName: "",
     lastName: "",
@@ -29,202 +26,210 @@ const Register = ({ onClose }) => {
     password: "",
     confirmPassword: "",
   });
-
-  const [touched, setTouched] = useState({
-    firstName: false,
-    lastName: false,
-    age: false,
-    address: false,
-    contactNumber: false,
-    email: false,
+  const [showMatchValidation, setShowMatchValidation] = useState(false);
+  const [showPassword, setShowPassword] = useState({
     password: false,
     confirmPassword: false,
   });
+  const [isFormValid, setIsFormValid] = useState(false);
 
-  const sanitizeInput = (value) => {
-    return value
-      .replace(/[<>"';%(){}]/g, "") // Remove special chars
-      .replace(/\s\s+/g, " "); // Replace multiple spaces with single space
-  };
+  // Validate entire form whenever formData or errors change
+  useEffect(() => {
+    const hasErrors = Object.values(errors).some((error) => error !== "");
+    const allFieldsFilled = Object.values(formData).every(
+      (field) => field.trim() !== ""
+    );
+    setIsFormValid(!hasErrors && allFieldsFilled);
+  }, [formData, errors]);
 
-  const formHandleChange = (e) => {
+  // Handle input changes
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    const sanitizedValue = sanitizeInput(value);
-
     setFormData((prev) => ({
       ...prev,
-      [name]: sanitizedValue,
+      [name]: value,
     }));
 
-    // Only validate if the field has been touched
-    if (touched[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: validateField(name, sanitizedValue),
-      }));
+    // Clear error when user starts correcting
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    // Mark all fields as touched
-    const allTouched = Object.keys(formData).reduce((acc, key) => {
-      acc[key] = true;
-      return acc;
-    }, {});
-    setTouched(allTouched);
-
-    // Validate all fields
-    const newErrors = {};
-    Object.keys(formData).forEach((key) => {
-      newErrors[key] = validateField(key, formData[key]);
-    });
-    setErrors(newErrors);
-
-    // Check if form is valid
-    const isValid = Object.values(newErrors).every((error) => !error);
-
-    if (!isValid) {
-      setSubmitError("Please fix all errors before submitting.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const payload = {
-        first_name: formData.firstName.trim(),
-        last_name: formData.lastName.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-        ...(formData.age && { age: formData.age }),
-        ...(formData.address && { address: formData.address.trim() }),
-        ...(formData.contactNumber && {
-          mobile_number: formData.contactNumber.replace(/\D/g, ""),
-        }),
-      };
-
-      const response = await axios.post(
-        "http://localhost:5100/create-user",
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      console.log("Registration success:", response.data);
-      onClose(); // Close the modal after successful submission
-    } catch (error) {
-      const errorMsg =
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        "An error occurred during submission. Please try again.";
-      setSubmitError(errorMsg);
-      console.error(
-        "Registration error:",
-        error.response?.data || error.message
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  // Field validation logic
   const validateField = (name, value) => {
+    const trimmedValue = value.trim();
     let error = "";
-    const sanitizedValue = sanitizeInput(value);
 
     switch (name) {
       case "firstName":
       case "lastName":
-        if (!sanitizedValue) {
-          error = "This field is required";
-        } else if (sanitizedValue.length < 2) {
-          error = "Must be at least 2 characters";
-        } else if (sanitizedValue.length > 30) {
-          error = "Maximum 30 characters allowed";
-        } else if (!/^[\p{L}\s'-]+$/u.test(sanitizedValue)) {
-          error = "Only letters, spaces, hyphens, and apostrophes allowed";
+        if (!trimmedValue) {
+          error = `${name === "firstName" ? "First" : "Last"} name is required`;
+        } else if (trimmedValue.length < 2) {
+          error = "Minimum 2 characters";
+        } else if (trimmedValue.length > 30) {
+          error = "Maximum 30 characters";
+        } else if (!/^[a-zA-Z\s\-']+$/.test(trimmedValue)) {
+          if (/[0-9]/.test(trimmedValue)) error = "Numbers not allowed";
+          else if (/[!@#$%^&*]/.test(trimmedValue))
+            error = "Special symbols not allowed";
+          else error = "Only letters, spaces, hyphens, and apostrophes allowed";
         }
         break;
 
       case "age":
-        if (!sanitizedValue) {
-          error = "This field is required";
-        } else if (!/^\d+$/.test(sanitizedValue)) {
-          error = "Age must be a whole number";
+        const sanitizedAge = trimmedValue.replace(/\D/g, "");
+        if (!trimmedValue) {
+          error = "Age is required";
+        } else if (sanitizedAge !== trimmedValue) {
+          error = "Only numbers allowed";
         } else {
-          const ageNum = parseInt(sanitizedValue, 10);
-          if (ageNum < 18) error = "Minimum age is 18";
+          const ageNum = parseInt(sanitizedAge, 10);
+          if (ageNum < 18) error = "You must be at least 18 years old";
           else if (ageNum > 120) error = "Please enter a valid age";
+
+          // Auto-format the age if valid
+          if (!error && formData.age !== sanitizedAge) {
+            setFormData((prev) => ({ ...prev, age: sanitizedAge }));
+          }
         }
         break;
-      case "address":
-        if (!sanitizedValue) {
-          error = "Address is required";
-        } else if (sanitizedValue.length < 5) {
-          error = "Address too short (min 5 characters)";
-        } else if (sanitizedValue.length > 100) {
-          error = "Address too long (max 100 characters)";
-        }
-        break;
-      case "contactNumber":
-        const cleanNumber = sanitizedValue.replace(/[^0-9]/g, "");
-        if (!sanitizedValue) {
-          error = "Contact number is required";
-        } else if (cleanNumber.length < 7) {
-          error = "Must contain at least 7 digits";
-        } else if (cleanNumber.length > 15) {
-          error = "Maximum 15 digits allowed";
-        } else if (/([+()-])\1/.test(sanitizedValue)) {
-          error = "Invalid character sequence";
-        }
-        break;
+
       case "email":
-        if (!sanitizedValue) {
+        if (!trimmedValue) {
           error = "Email is required";
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizedValue)) {
-          error = "Please enter a valid email address";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedValue)) {
+          error = "Please enter a valid email";
+        } else if (trimmedValue.length > 254) {
+          error = "Email too long (max 254 characters)";
+        } else if (trimmedValue.endsWith(".")) {
+          error = "Invalid email format";
         }
         break;
+
+      case "address":
+        const sanitizedAddress = trimmedValue
+          .replace(/[<>"']/g, "")
+          .replace(/\s{2,}/g, " ")
+          .trim();
+
+        if (!trimmedValue) {
+          error = "Address is required";
+        } else if (trimmedValue.length < 5) {
+          error = "Address too short (min 5 characters)";
+        } else if (trimmedValue.length > 200) {
+          error = "Address too long (max 200 characters)";
+        } else if (/[<>]/.test(trimmedValue)) {
+          error = "Address contains invalid symbols";
+        } else if (!/^[a-zA-Z0-9\s.,#\-()\/]+$/.test(trimmedValue)) {
+          error = "Contains invalid characters";
+        }
+
+        // Auto-format address if valid
+        if (!error && formData.address !== sanitizedAddress) {
+          setFormData((prev) => ({ ...prev, address: sanitizedAddress }));
+        }
+        break;
+
+      case "contactNumber":
+        const sanitizedNumber = trimmedValue
+          .replace(/[^\d+()\-\.\s]/g, "")
+          .replace(/\s{2,}/g, " ")
+          .trim();
+
+        if (!trimmedValue) {
+          error = "Phone number is required";
+        } else if (!/^[\d+()\-\.\s]{6,20}$/.test(trimmedValue)) {
+          error = "Invalid phone number format";
+        } else if (!/\d{6,}/.test(trimmedValue.replace(/\D/g, ""))) {
+          error = "Must contain at least 6 digits";
+        } else if (trimmedValue.length > 20) {
+          error = "Number too long (max 20 chars)";
+        }
+
+        // Auto-format number if valid
+        if (!error && formData.contactNumber !== sanitizedNumber) {
+          setFormData((prev) => ({ ...prev, contactNumber: sanitizedNumber }));
+        }
+        break;
+
       case "password":
-        if (!sanitizedValue) {
+        if (!trimmedValue) {
           error = "Password is required";
-        } else if (sanitizedValue.length < 8) {
-          error = "Password must be at least 8 characters";
-        } else if (!/[A-Z]/.test(sanitizedValue)) {
-          error = "Password must contain at least one uppercase letter";
-        } else if (!/[0-9]/.test(sanitizedValue)) {
-          error = "Password must contain at least one number";
+        } else if (trimmedValue.length < 8) {
+          error = "Minimum 8 characters";
+        } else if (!/[A-Z]/.test(trimmedValue)) {
+          error = "At least 1 uppercase letter";
+        } else if (!/[a-z]/.test(trimmedValue)) {
+          error = "At least 1 lowercase letter";
+        } else if (!/\d/.test(trimmedValue)) {
+          error = "At least 1 number";
+        } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(trimmedValue)) {
+          error = "At least 1 special character";
+        } else if (trimmedValue.length > 64) {
+          error = "Maximum 64 characters";
+        } else if (/(.)\1{3,}/.test(trimmedValue)) {
+          error = "Too many repeating characters";
         }
         break;
 
       case "confirmPassword":
-        if (!sanitizedValue) {
+        if (!trimmedValue) {
           error = "Please confirm your password";
-        } else if (sanitizedValue !== formData.password) {
-          error = "Passwords do not match";
+        } else if (trimmedValue !== formData.password) {
+          error = "Passwords don't match";
         }
-        break;
-      default:
         break;
     }
     return error;
   };
 
+  // Handle field blur (validate when leaving field)
   const handleBlur = (e) => {
     const { name, value } = e.target;
-    setTouched((prev) => ({ ...prev, [name]: true }));
-    setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
+    const error = validateField(name, value);
+    setErrors((prev) => ({ ...prev, [name]: error }));
+
+    // Activate password match validation only for confirmPassword
+    if (name === "confirmPassword") {
+      setShowMatchValidation(true);
+    }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  // Toggle password visibility
+  const togglePasswordVisibility = (field) => {
+    setShowPassword((prev) => ({
+      ...prev,
+      [field]: !prev[field],
+    }));
   };
 
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword);
+  // Form submission handler
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate all fields before submission
+    const newErrors = {};
+    Object.entries(formData).forEach(([name, value]) => {
+      newErrors[name] = validateField(name, value);
+    });
+    setErrors(newErrors);
+
+    // Check if form is valid
+    const isValid = Object.values(newErrors).every((error) => !error);
+    if (!isValid) return;
+
+    setIsSubmitting(true);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      console.log("Form submitted:", formData);
+      // Here you would typically call your actual API
+      // await api.register(formData);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -234,306 +239,251 @@ const Register = ({ onClose }) => {
           <h3>Register</h3>
           <button
             id="close-register-btn"
-            onClick={!isSubmitting ? onClose : undefined}
             aria-label="Close registration modal"
-            disabled={isSubmitting}
+            onClick={onClose}
           >
             &times;
           </button>
         </div>
+
         <div className="register-modal-body">
-          {submitError && (
-            <div className="error-message" role="alert">
-              {submitError}
-            </div>
-          )}
-          <form onSubmit={handleFormSubmit} noValidate>
+          <form noValidate onSubmit={handleSubmit}>
+            {/* First Name Field */}
             <label htmlFor="firstName">First Name</label>
             <input
               id="firstName"
               type="text"
               name="firstName"
               value={formData.firstName}
-              onChange={formHandleChange}
+              onChange={handleInputChange}
               onBlur={handleBlur}
-              className={
-                touched.firstName && errors.firstName ? "input-error" : ""
-              }
-              aria-describedby="error-firstname"
+              className={errors.firstName ? "input-error" : ""}
               aria-invalid={!!errors.firstName}
-              disabled={isSubmitting}
+              aria-describedby={
+                errors.firstName ? "firstName-error" : undefined
+              }
             />
-            <div
-              className="error-message"
-              id="error-firstname"
-              aria-live="assertive"
-              style={{
-                visibility:
-                  touched.firstName && errors.firstName ? "visible" : "hidden",
-                height: touched.firstName ? "auto" : "1rem",
-              }}
+            <p
+              id="firstName-error"
+              className={`error-message ${!errors.firstName ? "empty" : ""}`}
             >
-              {touched.firstName ? errors.firstName || " " : " "}
-            </div>
+              {errors.firstName || "\u00A0"} {/* &nbsp; as fallback content */}
+            </p>
 
+            {/* Last Name Field */}
             <label htmlFor="lastName">Last Name</label>
             <input
               id="lastName"
               type="text"
               name="lastName"
               value={formData.lastName}
-              onChange={formHandleChange}
+              onChange={handleInputChange}
               onBlur={handleBlur}
-              className={
-                touched.lastName && errors.lastName ? "input-error" : ""
-              }
-              aria-describedby="error-lastname"
+              className={errors.lastName ? "input-error" : ""}
               aria-invalid={!!errors.lastName}
-              disabled={isSubmitting}
+              aria-describedby={errors.lastName ? "lastName-error" : undefined}
             />
-            <div
-              className="error-message"
-              id="error-lastname"
-              aria-live="assertive"
-              style={{
-                visibility:
-                  touched.lastName && errors.lastName ? "visible" : "hidden",
-                height: touched.lastName ? "auto" : "1rem",
-              }}
+            <p
+              id="lastName-error"
+              className={`error-message ${!errors.lastName ? "empty" : ""}`}
             >
-              {touched.lastName ? errors.lastName || " " : " "}
-            </div>
+              {errors.lastName || "\u00A0"} {/* &nbsp; as fallback content */}
+            </p>
 
+            {/* Age Field */}
             <label htmlFor="age">Age</label>
             <input
               id="age"
-              type="number"
-              pattern="[0-9]*"
+              type="text" // Using text to allow for better formatting
+              inputMode="numeric" // Shows numeric keyboard on mobile
               name="age"
               value={formData.age}
-              onChange={formHandleChange}
+              onChange={handleInputChange}
               onBlur={handleBlur}
-              className={touched.age && errors.age ? "input-error" : ""}
-              aria-describedby="error-age"
+              className={errors.age ? "input-error" : ""}
               aria-invalid={!!errors.age}
-              disabled={isSubmitting}
+              aria-describedby={errors.age ? "age-error" : undefined}
             />
-            <div
-              className="error-message"
-              id="error-age"
-              aria-live="assertive"
-              style={{
-                visibility: touched.age && errors.age ? "visible" : "hidden",
-                height: touched.age ? "auto" : "1rem",
-              }}
+            <p
+              id="age-error"
+              className={`error-message ${!errors.age ? "empty" : ""}`}
             >
-              {touched.age ? errors.age || " " : " "}
-            </div>
+              {errors.age || "\u00A0"} {/* &nbsp; as fallback content */}
+            </p>
 
+            {/* Address Field */}
             <label htmlFor="address">Address</label>
             <textarea
               id="address"
               name="address"
-              value={formData.address}
-              onChange={formHandleChange}
               rows={4}
+              value={formData.address}
+              onChange={handleInputChange}
               onBlur={handleBlur}
-              className={touched.address && errors.address ? "input-error" : ""}
-              aria-describedby="error-address"
+              className={errors.address ? "input-error" : ""}
               aria-invalid={!!errors.address}
-              disabled={isSubmitting}
+              aria-describedby={errors.address ? "address-error" : undefined}
             />
-            <div
-              className="error-message"
-              id="error-address"
-              aria-live="assertive"
-              style={{
-                visibility:
-                  touched.address && errors.address ? "visible" : "hidden",
-                height: touched.address ? "auto" : "1rem",
-              }}
+            <p
+              id="address-error"
+              className={`error-message ${!errors.address ? "empty" : ""}`}
             >
-              {touched.address ? errors.address || " " : " "}
-            </div>
+              {errors.address || "\u00A0"} {/* &nbsp; as fallback content */}
+            </p>
 
+            {/* Contact Number Field */}
             <label htmlFor="contactNumber">Contact #</label>
             <input
               id="contactNumber"
               type="tel"
               name="contactNumber"
               value={formData.contactNumber}
-              onChange={formHandleChange}
+              onChange={handleInputChange}
               onBlur={handleBlur}
-              className={
-                touched.contactNumber && errors.contactNumber
-                  ? "input-error"
-                  : ""
-              }
-              aria-describedby="error-contactnumber"
+              className={errors.contactNumber ? "input-error" : ""}
               aria-invalid={!!errors.contactNumber}
-              disabled={isSubmitting}
+              aria-describedby={
+                errors.contactNumber ? "contactNumber-error" : undefined
+              }
             />
-            <div
-              className="error-message"
-              id="error-contactnumber"
-              aria-live="assertive"
-              style={{
-                visibility:
-                  touched.contactNumber && errors.contactNumber
-                    ? "visible"
-                    : "hidden",
-                height: touched.contactNumber ? "auto" : "1rem",
-              }}
+            <p
+              id="contactNumber-error"
+              className={`error-message ${
+                !errors.contactNumber ? "empty" : ""
+              }`}
             >
-              {touched.contactNumber ? errors.contactNumber || " " : " "}
-            </div>
+              {errors.contactNumber || "\u00A0"}{" "}
+              {/* &nbsp; as fallback content */}
+            </p>
 
+            {/* Email Field */}
             <label htmlFor="email">Email</label>
             <input
               id="email"
               type="email"
               name="email"
               value={formData.email}
-              onChange={formHandleChange}
+              onChange={handleInputChange}
               onBlur={handleBlur}
-              className={touched.email && errors.email ? "input-error" : ""}
-              aria-describedby="error-email"
+              className={errors.email ? "input-error" : ""}
               aria-invalid={!!errors.email}
-              disabled={isSubmitting}
+              aria-describedby={errors.email ? "email-error" : undefined}
             />
-            <div
-              className="error-message"
-              id="error-email"
-              aria-live="assertive"
-              style={{
-                visibility:
-                  touched.email && errors.email ? "visible" : "hidden",
-                height: touched.email ? "auto" : "1rem",
-              }}
+            <p
+              id="email-error"
+              className={`error-message ${!errors.email ? "empty" : ""}`}
             >
-              {touched.email ? errors.email || " " : " "}
-            </div>
+              {errors.email || "\u00A0"} {/* &nbsp; as fallback content */}
+            </p>
 
+            {/* Password Field */}
             <label htmlFor="password">Password</label>
             <div className="password-input-container">
               <input
                 id="password"
-                type={showPassword ? "text" : "password"}
+                type={showPassword.password ? "text" : "password"}
                 name="password"
-                placeholder="Must be 8+ characters with 1 uppercase letter and 1 number"
                 value={formData.password}
-                onChange={formHandleChange}
+                onChange={handleInputChange}
                 onBlur={handleBlur}
-                className={
-                  touched.password && errors.password ? "input-error" : ""
-                }
-                aria-describedby="error-password"
+                className={errors.password ? "input-error" : ""}
                 aria-invalid={!!errors.password}
-                disabled={isSubmitting}
+                aria-describedby="password-error"
               />
               <button
                 type="button"
                 className="password-toggle"
-                onClick={togglePasswordVisibility}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                disabled={isSubmitting}
-                tabIndex="-1"
+                onClick={() => togglePasswordVisibility("password")} // Only toggles password field
+                aria-label={
+                  showPassword.password ? "Hide password" : "Show password"
+                }
+                tabIndex={-1}
               >
-                {showPassword ? "👁️" : "👁️‍🗨️"}
+                {showPassword.password ? "👁️" : "👁️‍🗨️"}
               </button>
             </div>
-            <div
-              className="error-message"
-              id="error-password"
-              aria-live="assertive"
-              style={{
-                visibility:
-                  touched.password && errors.password ? "visible" : "hidden",
-                height: touched.password ? "auto" : "1rem",
-              }}
+            <p
+              id="password-error"
+              className={`error-message ${!errors.password ? "empty" : ""}`}
             >
-              {touched.password ? errors.password || " " : " "}
-            </div>
+              {errors.password || "\u00A0"}
+            </p>
 
+            {/* Confirm Password Field */}
             <label htmlFor="confirmPassword">Confirm Password</label>
             <div className="confirm-password-input-container">
               <input
                 id="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
+                type={showPassword.confirmPassword ? "text" : "password"} // Uses confirmPassword state
                 name="confirmPassword"
-                placeholder="Re-type password"
                 value={formData.confirmPassword}
-                onChange={formHandleChange}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (!errors.confirmPassword) setShowMatchValidation(true);
+                }}
                 onBlur={handleBlur}
-                className={
-                  touched.confirmPassword && errors.confirmPassword
-                    ? "input-error"
-                    : ""
-                }
-                aria-describedby="error-confirm-password"
+                className={errors.confirmPassword ? "input-error" : ""}
                 aria-invalid={!!errors.confirmPassword}
-                disabled={isSubmitting}
+                aria-describedby="confirmPassword-message"
               />
               <button
                 type="button"
-                className="confirm-password-toggle"
-                onClick={toggleConfirmPasswordVisibility}
+                className="password-toggle"
+                onClick={() => togglePasswordVisibility("confirmPassword")} // Only toggles confirmPassword field
                 aria-label={
-                  showConfirmPassword ? "Hide password" : "Show password"
+                  showPassword.confirmPassword
+                    ? "Hide password"
+                    : "Show password"
                 }
-                disabled={isSubmitting}
-                tabIndex="-1"
+                tabIndex={-1}
               >
-                {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
+                {showPassword.confirmPassword ? "👁️" : "👁️‍🗨️"}
               </button>
             </div>
-            <div
-              className="error-message"
-              id="error-confirm-password"
-              aria-live="assertive"
-              style={{
-                visibility:
-                  touched.confirmPassword && errors.confirmPassword
-                    ? "visible"
-                    : "hidden",
-                height: touched.confirmPassword ? "auto" : "1rem",
-              }}
+            <p
+              id="confirmPassword-message"
+              className={
+                errors.confirmPassword ||
+                (showMatchValidation &&
+                  formData.password !== formData.confirmPassword)
+                  ? "error-message"
+                  : showMatchValidation &&
+                    formData.password === formData.confirmPassword
+                  ? "password-match"
+                  : "empty-message"
+              }
             >
-              {touched.confirmPassword ? errors.confirmPassword || " " : " "}
-            </div>
+              {errors.confirmPassword
+                ? errors.confirmPassword
+                : showMatchValidation
+                ? formData.password === formData.confirmPassword
+                  ? "✓ Passwords match"
+                  : "✗ Passwords don't match"
+                : "\u00A0"}
+            </p>
 
+            {/* Form Buttons */}
             <div className="form-btn">
               <button
                 type="submit"
                 id="submit-btn"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isFormValid}
                 aria-busy={isSubmitting}
               >
                 {isSubmitting ? (
-                  <span className="submit-content">
-                    Submitting...
-                    <span className="submit-spinner"></span>
-                  </span>
+                  <span className="spinner" aria-hidden="true" />
                 ) : (
                   "Submit"
                 )}
               </button>
-              <button
-                id="cancel-btn"
-                onClick={onClose}
-                type="button"
-                disabled={isSubmitting}
-              >
+              <button id="cancel-btn" type="button" onClick={onClose}>
                 Cancel
               </button>
             </div>
           </form>
         </div>
       </div>
-      <div
-        className="register-modal-overlay"
-        onClick={!isSubmitting ? onClose : undefined}
-      ></div>
+      <div className="register-modal-overlay" onClick={onClose}></div>
     </>
   );
 };
