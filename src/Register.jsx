@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./styles/Register.css";
+import axios from "axios";
 
 const Register = ({ onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,16 +93,39 @@ const Register = ({ onClose }) => {
     setSubmitError(null);
 
     try {
-      // Here you would typically make an API call
-      console.log("Form submitted:", formData);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const payload = {
+        first_name: formData.firstName.trim(),
+        last_name: formData.lastName.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        ...(formData.age && { age: formData.age }),
+        ...(formData.address && { address: formData.address.trim() }),
+        ...(formData.contactNumber && {
+          mobile_number: formData.contactNumber.replace(/\D/g, ""),
+        }),
+      };
 
-      // Handle successful submission
-      // You might want to redirect or show a success message
+      const response = await axios.post(
+        "http://localhost:5100/create-user",
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log("Registration success:", response.data);
       onClose(); // Close the modal after successful submission
     } catch (error) {
-      setSubmitError("An error occurred during submission. Please try again.");
+      const errorMsg =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "An error occurred during submission. Please try again.";
+      setSubmitError(errorMsg);
+      console.error(
+        "Registration error:",
+        error.response?.data || error.message
+      );
     } finally {
       setIsSubmitting(false);
     }
