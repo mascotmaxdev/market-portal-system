@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "./styles/Register.css";
 
 const Register = ({ onClose }) => {
@@ -55,6 +56,9 @@ const Register = ({ onClose }) => {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
+
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
 
   // Field validation logic
   const validateField = (name, value) => {
@@ -208,7 +212,7 @@ const Register = ({ onClose }) => {
   // Form submission handler
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    if (isSubmitting) return;
     // Validate all fields before submission
     const newErrors = {};
     Object.entries(formData).forEach(([name, value]) => {
@@ -218,19 +222,78 @@ const Register = ({ onClose }) => {
 
     // Check if form is valid
     const isValid = Object.values(newErrors).every((error) => !error);
-    if (!isValid) return;
-
+    if (!isValid) {
+      setIsSubmitting(false); // Ensure button can be clicked again
+      return;
+    }
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      console.log("Form submitted:", formData);
-      // Here you would typically call your actual API
-      // await api.register(formData);
+      const response = await axios.post(
+        "http://localhost:5100/registration",
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setRegistrationSuccess(true);
+        setFormData({
+          firstName: "",
+          lastName: "",
+          age: "",
+          address: "",
+          contactNumber: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+        });
+
+        console.log("Registration successful", response.data);
+        setTimeout(onClose, 2000); // Auto-close after success
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          // Handle duplicate email error specifically
+          if (error.response.data.name === "DuplicateError") {
+            setErrors((prev) => ({
+              ...prev,
+              email: error.response.data.message,
+            }));
+          }
+          // Handle other validation errors
+          else if (error.response.data.details) {
+            setErrors(error.response.data.details);
+          }
+          // Generic error from backend
+          else {
+            alert(error.response.data.message || "Registration failed");
+          }
+        } else {
+          // Network error
+          alert("Network error. Please try again.");
+        }
+      } else {
+        // Unexpected error
+        console.error("Unexpected error:", error);
+        alert("An unexpected error occurred");
+      }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Always enable button
     }
   };
+
+  if (registrationSuccess) {
+    return (
+      <div className="success-message">
+        <h2>Registration Succesful</h2>
+        <p>Your account has been created</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -365,7 +428,7 @@ const Register = ({ onClose }) => {
               value={formData.email}
               onChange={handleInputChange}
               onBlur={handleBlur}
-              className={errors.email ? "input-error" : ""}
+              className={errors.email ? "input-error highlight-error" : ""}
               aria-invalid={!!errors.email}
               aria-describedby={errors.email ? "email-error" : undefined}
             />
@@ -414,14 +477,17 @@ const Register = ({ onClose }) => {
             <div className="confirm-password-input-container">
               <input
                 id="confirmPassword"
-                type={showPassword.confirmPassword ? "text" : "password"} // Uses confirmPassword state
+                type={showPassword.confirmPassword ? "text" : "password"}
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={(e) => {
                   handleInputChange(e);
                   if (!errors.confirmPassword) setShowMatchValidation(true);
                 }}
-                onBlur={handleBlur}
+                onBlur={(e) => {
+                  handleBlur(e);
+                  setConfirmPasswordTouched(true);
+                }}
                 className={errors.confirmPassword ? "input-error" : ""}
                 aria-invalid={!!errors.confirmPassword}
                 aria-describedby="confirmPassword-message"
@@ -429,7 +495,7 @@ const Register = ({ onClose }) => {
               <button
                 type="button"
                 className="password-toggle"
-                onClick={() => togglePasswordVisibility("confirmPassword")} // Only toggles confirmPassword field
+                onClick={() => togglePasswordVisibility("confirmPassword")}
                 aria-label={
                   showPassword.confirmPassword
                     ? "Hide password"
@@ -443,11 +509,12 @@ const Register = ({ onClose }) => {
             <p
               id="confirmPassword-message"
               className={
-                errors.confirmPassword ||
-                (showMatchValidation &&
-                  formData.password !== formData.confirmPassword)
+                errors.confirmPassword
                   ? "error-message"
-                  : showMatchValidation &&
+                  : confirmPasswordTouched &&
+                    formData.password !== formData.confirmPassword
+                  ? "error-message"
+                  : confirmPasswordTouched &&
                     formData.password === formData.confirmPassword
                   ? "password-match"
                   : "empty-message"
@@ -455,7 +522,7 @@ const Register = ({ onClose }) => {
             >
               {errors.confirmPassword
                 ? errors.confirmPassword
-                : showMatchValidation
+                : confirmPasswordTouched
                 ? formData.password === formData.confirmPassword
                   ? "✓ Passwords match"
                   : "✗ Passwords don't match"
@@ -467,7 +534,7 @@ const Register = ({ onClose }) => {
               <button
                 type="submit"
                 id="submit-btn"
-                disabled={isSubmitting || !isFormValid}
+                disabled={isSubmitting}
                 aria-busy={isSubmitting}
               >
                 {isSubmitting ? (
